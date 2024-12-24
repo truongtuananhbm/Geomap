@@ -1,0 +1,311 @@
+Giai đoạn này sẽ áp dụng các thuật toán matching (như SIFT, LOFTR) để tìm các cặp điểm tương ứng giữa ảnh raster (ảnh chưa gắn tọa độ) và ảnh gắn tọa độ (ảnh đã có thông tin địa lý). Việc tìm các cặp điểm này sẽ giúp liên kết các đặc điểm trong ảnh raster với các vị trí thực tế trong không gian địa lý, là bước quan trọng trong quá trình chuyển đổi các điểm trên ảnh raster thành tọa độ địa lý.
+Input: Ảnh raster, ảnh gắn tọa độ (geo-referenced), các thuật toán SIFT/LOFTR.
+Output: Các cặp điểm tương ứng giữa ảnh raster và ảnh gắn tọa độ, báo cáo kết quả matching.
+đây là công việc input và output
+
+
+- hình 1.tiff có chứa các dữ liệu:
+ImageWidth: 856
+ImageLength: 496
+BitsPerSample: (8, 8, 8)
+Compression: 5
+33922: (0.0, 0.0, 0.0, 4162108.457013141, 7331784.814000026, 0.0) # long lat
+PhotometricInterpretation: 2
+33550: (4.777314267823555, 4.7773142678235025, 0.0) # tương ứng 1 pixel bằng 4.77 mét thực tế
+34735: (1, 1, 0, 5, 1024, 0, 1, 1, 1025, 0, 1, 1, 1026, 34737, 10, 0, 3072, 0, 1, 3857, 3076, 0, 1, 9001)
+
+- Dữ liệu metadata trả về từ image5.jpg:
+infor=
+{0: (2, 3, 0, 0), 
+1: b'N', 
+2: ((54, 1), (50371434, 1000000), (0, 1)), 
+3: b'E', 
+4: ((37, 1), (24320958, 1000000), (0, 1)), 
+6: (36667, 100), 
+7: ((9, 1), (45, 1), (32842170, 1000000)), 
+9: b'V', 18: b'WGS-84', 
+29: b'2021:04:22', 
+30: 0}
+
+Bao gồm: 
+1) longtitude = infor[3], lattitude = infor[4], attitude = infor[6] là cao độ chụp của flycam
+2) góc xoay của flycam so với hướng bắc (là trục thẳng đứng của bản đồ) lấy từ infor[7], giá trị cuối:32842170 
+3) từ cao độ của flycam, với focal length của ống kính là 20mm, suy ra được giá trị của mỗi pixel tương ứng bao nhiêu mm trên thực tế (xấp xỉ 52.38mm / px)
+4) đã có góc quay và tỉ lệ thực, áp được hình flycam vào map, cũng như suy ngược được tọa độ long lat của các điểm cho trước trong image5.jpg
+5) khi áp hình váo có thể lệch tọa độ 1 sai số, có thể dùng thêm matching để khớp hình
+
+
+Thật ra với 2 hình này xem như 2 csdl, nên thực tế hình chụp gì hay hiển thị gì không quan trọng lắm, có thể tính toán khớp mà không c6àn quan tâm đến hình thể hiện gì
+Sau đó mới dùng hình để nhận dạng đối tượng
+
+
+
+
+
+
+
+
+
+ExifTool Version Number         : 13.09
+File Name                       : image5.jpg
+Directory                       : .
+File Size                       : 8.1 MB
+File Modification Date/Time     : 2024:12:15 15:15:21+07:00
+File Access Date/Time           : 2024:12:18 18:49:59+07:00
+File Creation Date/Time         : 2024:12:18 18:49:12+07:00
+File Permissions                : -rw-rw-rw-
+File Type                       : JPEG
+File Type Extension             : jpg
+MIME Type                       : image/jpeg
+Exif Byte Order                 : Little-endian (Intel, II)
+Make                            : SONY
+Camera Model Name               : UMC-R10C
+Orientation                     : Horizontal (normal)
+X Resolution                    : 350
+Y Resolution                    : 350
+Resolution Unit                 : inches
+Software                        : UMC-R10C v2.00
+Modify Date                     : 2021:04:22 09:45:14
+Y Cb Cr Positioning             : Co-sited
+Exposure Time                   : 1/800
+F Number                        : 6.3
+ISO                             : 125
+Sensitivity Type                : Recommended Exposure Index
+Recommended Exposure Index      : 125
+Exif Version                    : 0230
+Date/Time Original              : 2021:04:22 09:45:14
+Create Date                     : 2021:04:22 09:45:14
+Components Configuration        : Y, Cb, Cr, -
+Compressed Bits Per Pixel       : 3
+Brightness Value                : 10.2046875
+Exposure Compensation           : 0
+Max Aperture Value              : 2.8
+Metering Mode                   : Multi-segment
+Light Source                    : Daylight
+Flash                           : Off, Did not fire
+Focal Length                    : 20.0 mm
+Rating                          : 0
+Brightness                      : 0
+Long Exposure Noise Reduction   : On (unused)
+High ISO Noise Reduction        : Normal
+HDR                             : Off; Uncorrected image
+WB Shift AB GM                  : 0 0
+Face Info Offset                : 94
+Sony Date Time                  : 2021:04:22 09:45:14
+Sony Image Height               : 3632
+Sony Image Width                : 5456
+Faces Detected                  : 0
+Face Info Length                : 37
+Meta Version                    : DC7303320222000
+Creative Style                  : Standard
+Color Temperature               : Auto
+Color Compensation Filter       : 0
+Scene Mode                      : Standard
+Zone Matching                   : ISO Setting Used
+Dynamic Range Optimizer         : Auto
+Image Stabilization             : Off
+Color Mode                      : Standard
+Full Image Size                 : 5456x3632
+Preview Image Size              : 1616x1080
+File Format                     : ARW 2.3.1
+Quality                         : Fine
+Flash Exposure Compensation     : 0
+White Balance Fine Tune         : 0
+White Balance                   : Daylight
+Sony Model ID                   : ILCE-QX1
+Multi Frame Noise Reduction     : Off
+Picture Effect                  : Off
+Soft Skin Effect                : Off
+Vignetting Correction           : Auto
+Lateral Chromatic Aberration    : Auto
+Distortion Correction Setting   : Off
+Lens Type                       : E-Mount, T-Mount, Other Lens or no lens
+Lens Spec                       : E 20mm F2.8
+Auto Portrait Framed            : No
+Flash Action                    : Did not fire
+Electronic Front Curtain Shutter: On
+Focus Mode                      : Manual
+AF Points Used                  : (none)
+AF Tracking                     : Off
+Multi Frame NR Effect           : Normal
+Flash Level                     : Normal
+Release Mode                    : Normal
+Sequence Number                 : Single
+Anti-Blur                       : Off
+Sequence Image Number           : 1
+Sequence File Number            : 1
+Sequence Length                 : 1 file
+Camera Orientation              : Rotate 90 CW
+Quality 2                       : JPEG
+Model Release Year              : 2014
+ISO Setting                     : Auto
+ISO Auto Min                    : Auto
+ISO Auto Max                    : 3200
+AF Area Mode                    : Manual
+Focus Position 2                : 255
+Exposure Program                : Manual
+Intelligent Auto                : Off
+Lens Zoom Position              : 0%
+Sony ISO                        : 114
+Base ISO                        : 100
+Stops Above Base ISO            : 0.2
+Sony Exposure Time 2            : 1/811
+Sony Max Aperture Value         : 2.8
+Sony Image Width Max            : 5472
+Sony Image Height Max           : 3656
+Picture Effect 2                : Off
+Distortion Correction           : None
+Distortion Corr Params          : 20 -2 -44 -100 -176 -270 -376 -482 -582 -662 -718 0 0 0 0 0
+Battery Temperature             : 39.4 C
+Battery Level                   : 90%
+Sony Max Aperture               : 0.7
+Sony Min Aperture               : 1
+Shutter                         : Mechanical (3399 5757 7240)
+Flash Status                    : Built-in Flash present
+Shutter Count                   : 161
+Sony Exposure Time              : 1/811
+Sony F Number                   : 6.3
+Release Mode 2                  : Normal
+Internal Serial Number          : 0000590e
+Lens Mount                      : E-mount
+Lens Format                     : APS-C
+Lens Type 2                     : Sony E 20mm F2.8
+Distortion Corr Params Present  : Yes
+Lens Spec Features              : E
+Flashpix Version                : 0100
+Color Space                     : sRGB
+Exif Image Width                : 5456
+Exif Image Height               : 3632
+Interoperability Index          : R98 - DCF basic file (sRGB)
+Interoperability Version        : 0100
+File Source                     : Digital Camera
+Scene Type                      : Directly photographed
+Custom Rendered                 : Normal
+Exposure Mode                   : Manual
+Digital Zoom Ratio              : 1
+Focal Length In 35mm Format     : 30 mm
+Scene Capture Type              : Standard
+Contrast                        : Normal
+Saturation                      : Normal
+Sharpness                       : Normal
+Lens Info                       : 20mm f/2.8
+Lens Model                      : E 20mm F2.8
+GPS Version ID                  : 2.3.0.0
+GPS Latitude Ref                : North
+GPS Longitude Ref               : East
+GPS Altitude                    : 366.67 m
+GPS Time Stamp                  : 09:45:32.84217
+GPS Status                      : Measurement Void
+GPS Map Datum                   : WGS-84
+GPS Date Stamp                  : 2021:04:22
+GPS Differential                : No Correction
+PrintIM Version                 : 0300
+Compression                     : JPEG (old-style)
+Image Description               :
+Thumbnail Offset                : 38576
+Thumbnail Length                : 10769
+XMP Toolkit                     : Exempi + XMP Core 5.5.0
+Creator Tool                    : UMC-R10C v2.00
+Lens                            : E 20mm F2.8
+C3P Gps Ins Offset X            : 0
+C3P Gps Ins Offset Y            : -0,070
+C3P Gps Ins Offset Z            : 0,095
+Yaw                             : 141.78
+Pitch                           : -6.0599995
+Roll                            : 7.93
+Current IPTC Digest             : 8b2a45fe5e23a7c080a1ef35c459fbf9
+Coded Character Set             : UTF8
+Application Record Version      : 4
+Date Created                    : 2021:04:22
+Time Created                    : 09:45:14
+IPTC Digest                     : 8b2a45fe5e23a7c080a1ef35c459fbf9
+MPF Version                     : 0100
+Number Of Images                : 2
+MP Image Flags                  : Dependent child image
+MP Image Format                 : JPEG
+MP Image Type                   : Large Thumbnail (full HD equivalent)
+MP Image Length                 : 940467
+MP Image Start                  : 7204566
+Dependent Image 1 Entry Number  : 0
+Dependent Image 2 Entry Number  : 0
+Image Width                     : 5456
+Image Height                    : 3632
+Encoding Process                : Baseline DCT, Huffman coding
+Bits Per Sample                 : 8
+Color Components                : 3
+Y Cb Cr Sub Sampling            : YCbCr4:2:2 (2 1)
+Aperture                        : 6.3
+Image Size                      : 5456x3632
+Lens ID                         : Sony E 20mm F2.8
+Megapixels                      : 19.8
+Scale Factor To 35 mm Equivalent: 1.5
+Shutter Speed                   : 1/800
+Thumbnail Image                 : (Binary data 10769 bytes, use -b option to extract)
+GPS Date/Time                   : 2021:04:22 09:45:32.84217Z
+GPS Latitude                    : 54 deg 50' 22.29" N
+GPS Longitude                   : 37 deg 24' 19.26" E
+Date/Time Created               : 2021:04:22 09:45:14
+Preview Image                   : (Binary data 940467 bytes, use -b option to extract)
+Focus Distance 2                : inf
+Circle Of Confusion             : 0.020 mm
+Field Of View                   : 61.9 deg
+Focal Length                    : 20.0 mm (35 mm equivalent: 30.0 mm)
+GPS Position                    : 54 deg 50' 22.29" N, 37 deg 24' 19.26" E
+Hyperfocal Distance             : 3.17 m
+Light Value                     : 14.6
+
+
+
+{
+    "price": {
+        "tube": {
+            "120": 493,
+            "140": 558,
+            "160": 531,
+            "180": 683,
+            "200": 1180,
+            "250": 1411
+        },
+        "motor": {
+            "3.8kw": 3703,
+            "4.6kw": 4622,
+            "8kw": 6795,
+            "6.6kw": 5207
+        },
+        "crane": {
+            "mobile_articulated_crane": 4614,
+            "mobile_crane_250": 3314,
+            "floor_articulated_crane": 3349,
+            "floor_jib_crane_250_3m": 3351,
+            "floor_jib_crane_250_4m": 3524,
+            "floor_jib_crane_250_5m": 3599,
+            "wall_mounted_jib_crane_250_3m": 2263,
+            "wall_mounted_jib_crane_250_4m": 2268,
+            "wall_mounted_jib_crane_250_5m": 2318
+        },
+        "filter": {
+            "zfp120": 203,
+            "zfp300": 367
+        },
+        "power": {
+            "power_1": 0
+        },
+        "control_head": {
+            "single_control_head": 302,
+            "comfort_control_head": 632,
+            "hight_stack": 1264,
+            "extra_hand": 1264
+        },
+        "suction_pad": {
+            "bellow_250": 336,
+            "four_bellow_125": 387,
+            "oval_foam_suction_380_220": 188,
+            "sheet_metal_pad": 428,
+            "double_bellow_125": 212
+        }
+    },
+    "user": {
+        "name": "test_api"
+    },
+    "error": ""
+}
